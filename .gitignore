@@ -1,3 +1,26 @@
 PC
 PCbuild
 .hg*
+
+# Files added after configure
+Makefile
+Makefile.pre
+Misc/python.pc
+Modules/Setup
+Modules/Setup.config
+Modules/Setup.local
+Modules/config.c
+Modules/ld_so_aix
+config.log
+config.status
+pyconfig.h
+
+# Files added after make
+*.o
+*.pyc
+Parser/pgen
+Parser/pgen.stamp
+build/
+libpython2.7.a
+python.exe
+python.exe-gdb.py
