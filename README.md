@@ -15,3 +15,4 @@ Do not commit anything to the master branch. If you are going to make any change
 
 - [The entire dev guide](http://docs.python.org/devguide/)
 - [Compiler specific dev guide](http://docs.python.org/devguide/compiler.html)
+- [Visualization of Python's Grammar](http://la11111.devio.us/python_grammar.svg)
