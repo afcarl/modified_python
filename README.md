@@ -15,9 +15,5 @@ Do not commit anything to the master branch. If you are going to make any change
 
 - [The entire dev guide](http://docs.python.org/devguide/)
 - [Compiler specific dev guide](http://docs.python.org/devguide/compiler.html)
-<<<<<<< HEAD
-
-new branch
-=======
-- [Visualization of Python's Grammar](http://la11111.devio.us/python_grammar.svg)
->>>>>>> ea061bd... Add python grammar viz link to README
+- [Visualization of Python's grammar](http://la11111.devio.us/python_grammar.svg)
+- [Outlined steps of what we need to modify](http://www.python.org/dev/peps/pep-0306/)
