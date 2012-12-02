@@ -64,8 +64,8 @@ enum _stmt_kind {FunctionDef_kind=1, ClassDef_kind=2, Return_kind=3,
                   For_kind=8, While_kind=9, If_kind=10, With_kind=11,
                   Raise_kind=12, TryExcept_kind=13, TryFinally_kind=14,
                   Assert_kind=15, Import_kind=16, ImportFrom_kind=17,
-                  Exec_kind=18, Global_kind=19, Expr_kind=20, Pass_kind=21,
-                  Break_kind=22, Continue_kind=23};
+                  Exec_kind=18, Global_kind=19, Const_kind=20, Expr_kind=21,
+                  Pass_kind=22, Break_kind=23, Continue_kind=24};
 struct _stmt {
         enum _stmt_kind kind;
         union {
@@ -174,6 +174,10 @@ struct _stmt {
                 struct {
                         asdl_seq *names;
                 } Global;
+                
+                struct {
+                        asdl_seq *expr;
+                } Const;
                 
                 struct {
                         expr_ty value;
@@ -438,6 +442,8 @@ stmt_ty _Py_Exec(expr_ty body, expr_ty globals, expr_ty locals, int lineno, int
 #define Global(a0, a1, a2, a3) _Py_Global(a0, a1, a2, a3)
 stmt_ty _Py_Global(asdl_seq * names, int lineno, int col_offset, PyArena
                    *arena);
+#define Const(a0, a1, a2, a3) _Py_Const(a0, a1, a2, a3)
+stmt_ty _Py_Const(asdl_seq * expr, int lineno, int col_offset, PyArena *arena);
 #define Expr(a0, a1, a2, a3) _Py_Expr(a0, a1, a2, a3)
 stmt_ty _Py_Expr(expr_ty value, int lineno, int col_offset, PyArena *arena);
 #define Pass(a0, a1, a2) _Py_Pass(a0, a1, a2)

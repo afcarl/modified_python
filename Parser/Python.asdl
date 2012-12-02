@@ -42,6 +42,7 @@ module Python version "$Revision$"
 	      | Exec(expr body, expr? globals, expr? locals)
 
 	      | Global(identifier* names)
+	      | Const(stmt* expr)
 	      | Expr(expr value)
 	      | Pass | Break | Continue
 

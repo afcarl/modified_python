@@ -143,6 +143,10 @@ static PyTypeObject *Global_type;
 static char *Global_fields[]={
         "names",
 };
+static PyTypeObject *Const_type;
+static char *Const_fields[]={
+        "expr",
+};
 static PyTypeObject *Expr_type;
 static char *Expr_fields[]={
         "value",
@@ -728,6 +732,8 @@ static int init_types(void)
         if (!Exec_type) return 0;
         Global_type = make_type("Global", stmt_type, Global_fields, 1);
         if (!Global_type) return 0;
+        Const_type = make_type("Const", stmt_type, Const_fields, 1);
+        if (!Const_type) return 0;
         Expr_type = make_type("Expr", stmt_type, Expr_fields, 1);
         if (!Expr_type) return 0;
         Pass_type = make_type("Pass", stmt_type, NULL, 0);
@@ -1412,6 +1418,20 @@ Global(asdl_seq * names, int lineno, int col_offset, PyArena *arena)
                 return NULL;
         p->kind = Global_kind;
         p->v.Global.names = names;
+        p->lineno = lineno;
+        p->col_offset = col_offset;
+        return p;
+}
+
+stmt_ty
+Const(asdl_seq * expr, int lineno, int col_offset, PyArena *arena)
+{
+        stmt_ty p;
+        p = (stmt_ty)PyArena_Malloc(arena, sizeof(*p));
+        if (!p)
+                return NULL;
+        p->kind = Const_kind;
+        p->v.Const.expr = expr;
         p->lineno = lineno;
         p->col_offset = col_offset;
         return p;
@@ -2520,6 +2540,15 @@ ast2obj_stmt(void* _o)
                 value = ast2obj_list(o->v.Global.names, ast2obj_identifier);
                 if (!value) goto failed;
                 if (PyObject_SetAttrString(result, "names", value) == -1)
+                        goto failed;
+                Py_DECREF(value);
+                break;
+        case Const_kind:
+                result = PyType_GenericNew(Const_type, NULL, NULL);
+                if (!result) goto failed;
+                value = ast2obj_list(o->v.Const.expr, ast2obj_stmt);
+                if (!value) goto failed;
+                if (PyObject_SetAttrString(result, "expr", value) == -1)
                         goto failed;
                 Py_DECREF(value);
                 break;
@@ -4625,6 +4654,42 @@ obj2ast_stmt(PyObject* obj, stmt_ty* out, PyArena* arena)
                 if (*out == NULL) goto failed;
                 return 0;
         }
+        isinstance = PyObject_IsInstance(obj, (PyObject*)Const_type);
+        if (isinstance == -1) {
+                return 1;
+        }
+        if (isinstance) {
+                asdl_seq* expr;
+
+                if (PyObject_HasAttrString(obj, "expr")) {
+                        int res;
+                        Py_ssize_t len;
+                        Py_ssize_t i;
+                        tmp = PyObject_GetAttrString(obj, "expr");
+                        if (tmp == NULL) goto failed;
+                        if (!PyList_Check(tmp)) {
+                                PyErr_Format(PyExc_TypeError, "Const field \"expr\" must be a list, not a %.200s", tmp->ob_type->tp_name);
+                                goto failed;
+                        }
+                        len = PyList_GET_SIZE(tmp);
+                        expr = asdl_seq_new(len, arena);
+                        if (expr == NULL) goto failed;
+                        for (i = 0; i < len; i++) {
+                                stmt_ty value;
+                                res = obj2ast_stmt(PyList_GET_ITEM(tmp, i), &value, arena);
+                                if (res != 0) goto failed;
+                                asdl_seq_SET(expr, i, value);
+                        }
+                        Py_XDECREF(tmp);
+                        tmp = NULL;
+                } else {
+                        PyErr_SetString(PyExc_TypeError, "required field \"expr\" missing from Const");
+                        return 1;
+                }
+                *out = Const(expr, lineno, col_offset, arena);
+                if (*out == NULL) goto failed;
+                return 0;
+        }
         isinstance = PyObject_IsInstance(obj, (PyObject*)Expr_type);
         if (isinstance == -1) {
                 return 1;
@@ -6629,6 +6694,7 @@ init_ast(void)
         if (PyDict_SetItemString(d, "Exec", (PyObject*)Exec_type) < 0) return;
         if (PyDict_SetItemString(d, "Global", (PyObject*)Global_type) < 0)
             return;
+        if (PyDict_SetItemString(d, "Const", (PyObject*)Const_type) < 0) return;
         if (PyDict_SetItemString(d, "Expr", (PyObject*)Expr_type) < 0) return;
         if (PyDict_SetItemString(d, "Pass", (PyObject*)Pass_type) < 0) return;
         if (PyDict_SetItemString(d, "Break", (PyObject*)Break_type) < 0) return;
