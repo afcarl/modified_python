@@ -2658,6 +2658,15 @@ ast_for_global_stmt(struct compiling *c, const node *n)
 }
 
 static stmt_ty
+ast_for_const_stmt(struct compiling *c, const node *n)
+{
+    /* const_stmt: 'const' expr_stmt */
+    stmt_ty s;
+    s = ast_for_expr_stmt(c, CHILD(n, 1));
+    return Const(s, LINENO(n), n->n_col_offset, c->c_arena);
+}
+
+static stmt_ty
 ast_for_exec_stmt(struct compiling *c, const node *n)
 {
     expr_ty expr1, globals = NULL, locals = NULL;
@@ -3260,6 +3269,8 @@ ast_for_stmt(struct compiling *c, const node *n)
                 return ast_for_import_stmt(c, n);
             case global_stmt:
                 return ast_for_global_stmt(c, n);
+            case const_stmt:
+                return ast_for_const_stmt(c, n);
             case exec_stmt:
                 return ast_for_exec_stmt(c, n);
             case assert_stmt:

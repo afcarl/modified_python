@@ -688,6 +688,20 @@ class Global(Node):
     def __repr__(self):
         return "Global(%s)" % (repr(self.names),)
 
+class Const(Node):
+    def __init__(self, name, lineno=None):
+        self.names = name
+        self.lineno = lineno
+
+    def getChildren(self):
+        return self.name
+
+    def getChildNodes(self):
+        return ()
+
+    def __repr__(self):
+        return "Global(%s)" % (repr(self.name),)
+
 class If(Node):
     def __init__(self, tests, else_, lineno=None):
         self.tests = tests
