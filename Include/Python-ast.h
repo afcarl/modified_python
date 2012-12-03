@@ -176,7 +176,7 @@ struct _stmt {
                 } Global;
                 
                 struct {
-                        asdl_seq *expr;
+                        stmt_ty name;
                 } Const;
                 
                 struct {
@@ -443,7 +443,7 @@ stmt_ty _Py_Exec(expr_ty body, expr_ty globals, expr_ty locals, int lineno, int
 stmt_ty _Py_Global(asdl_seq * names, int lineno, int col_offset, PyArena
                    *arena);
 #define Const(a0, a1, a2, a3) _Py_Const(a0, a1, a2, a3)
-stmt_ty _Py_Const(asdl_seq * expr, int lineno, int col_offset, PyArena *arena);
+stmt_ty _Py_Const(stmt_ty name, int lineno, int col_offset, PyArena *arena);
 #define Expr(a0, a1, a2, a3) _Py_Expr(a0, a1, a2, a3)
 stmt_ty _Py_Expr(expr_ty value, int lineno, int col_offset, PyArena *arena);
 #define Pass(a0, a1, a2) _Py_Pass(a0, a1, a2)

@@ -145,7 +145,7 @@ static char *Global_fields[]={
 };
 static PyTypeObject *Const_type;
 static char *Const_fields[]={
-        "expr",
+        "name",
 };
 static PyTypeObject *Expr_type;
 static char *Expr_fields[]={
@@ -1424,14 +1424,19 @@ Global(asdl_seq * names, int lineno, int col_offset, PyArena *arena)
 }
 
 stmt_ty
-Const(asdl_seq * expr, int lineno, int col_offset, PyArena *arena)
+Const(stmt_ty name, int lineno, int col_offset, PyArena *arena)
 {
         stmt_ty p;
+        if (!name) {
+                PyErr_SetString(PyExc_ValueError,
+                                "field name is required for Const");
+                return NULL;
+        }
         p = (stmt_ty)PyArena_Malloc(arena, sizeof(*p));
         if (!p)
                 return NULL;
         p->kind = Const_kind;
-        p->v.Const.expr = expr;
+        p->v.Const.name = name;
         p->lineno = lineno;
         p->col_offset = col_offset;
         return p;
@@ -2546,9 +2551,9 @@ ast2obj_stmt(void* _o)
         case Const_kind:
                 result = PyType_GenericNew(Const_type, NULL, NULL);
                 if (!result) goto failed;
-                value = ast2obj_list(o->v.Const.expr, ast2obj_stmt);
+                value = ast2obj_stmt(o->v.Const.name);
                 if (!value) goto failed;
-                if (PyObject_SetAttrString(result, "expr", value) == -1)
+                if (PyObject_SetAttrString(result, "name", value) == -1)
                         goto failed;
                 Py_DECREF(value);
                 break;
@@ -4659,34 +4664,21 @@ obj2ast_stmt(PyObject* obj, stmt_ty* out, PyArena* arena)
                 return 1;
         }
         if (isinstance) {
-                asdl_seq* expr;
+                stmt_ty name;
 
-                if (PyObject_HasAttrString(obj, "expr")) {
+                if (PyObject_HasAttrString(obj, "name")) {
                         int res;
-                        Py_ssize_t len;
-                        Py_ssize_t i;
-                        tmp = PyObject_GetAttrString(obj, "expr");
+                        tmp = PyObject_GetAttrString(obj, "name");
                         if (tmp == NULL) goto failed;
-                        if (!PyList_Check(tmp)) {
-                                PyErr_Format(PyExc_TypeError, "Const field \"expr\" must be a list, not a %.200s", tmp->ob_type->tp_name);
-                                goto failed;
-                        }
-                        len = PyList_GET_SIZE(tmp);
-                        expr = asdl_seq_new(len, arena);
-                        if (expr == NULL) goto failed;
-                        for (i = 0; i < len; i++) {
-                                stmt_ty value;
-                                res = obj2ast_stmt(PyList_GET_ITEM(tmp, i), &value, arena);
-                                if (res != 0) goto failed;
-                                asdl_seq_SET(expr, i, value);
-                        }
+                        res = obj2ast_stmt(tmp, &name, arena);
+                        if (res != 0) goto failed;
                         Py_XDECREF(tmp);
                         tmp = NULL;
                 } else {
-                        PyErr_SetString(PyExc_TypeError, "required field \"expr\" missing from Const");
+                        PyErr_SetString(PyExc_TypeError, "required field \"name\" missing from Const");
                         return 1;
                 }
-                *out = Const(expr, lineno, col_offset, arena);
+                *out = Const(name, lineno, col_offset, arena);
                 if (*out == NULL) goto failed;
                 return 0;
         }
