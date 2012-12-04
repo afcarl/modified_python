@@ -42,7 +42,7 @@ module Python version "$Revision$"
 	      | Exec(expr body, expr? globals, expr? locals)
 
 	      | Global(identifier* names)
-	      | Const(stmt name)
+	      | Const(identifier name, expr value)
 	      | Expr(expr value)
 	      | Pass | Break | Continue
 

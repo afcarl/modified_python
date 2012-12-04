@@ -146,6 +146,7 @@ static char *Global_fields[]={
 static PyTypeObject *Const_type;
 static char *Const_fields[]={
         "name",
+        "value",
 };
 static PyTypeObject *Expr_type;
 static char *Expr_fields[]={
@@ -732,7 +733,7 @@ static int init_types(void)
         if (!Exec_type) return 0;
         Global_type = make_type("Global", stmt_type, Global_fields, 1);
         if (!Global_type) return 0;
-        Const_type = make_type("Const", stmt_type, Const_fields, 1);
+        Const_type = make_type("Const", stmt_type, Const_fields, 2);
         if (!Const_type) return 0;
         Expr_type = make_type("Expr", stmt_type, Expr_fields, 1);
         if (!Expr_type) return 0;
@@ -1424,7 +1425,8 @@ Global(asdl_seq * names, int lineno, int col_offset, PyArena *arena)
 }
 
 stmt_ty
-Const(stmt_ty name, int lineno, int col_offset, PyArena *arena)
+Const(identifier name, expr_ty value, int lineno, int col_offset, PyArena
+      *arena)
 {
         stmt_ty p;
         if (!name) {
@@ -1432,11 +1434,17 @@ Const(stmt_ty name, int lineno, int col_offset, PyArena *arena)
                                 "field name is required for Const");
                 return NULL;
         }
+        if (!value) {
+                PyErr_SetString(PyExc_ValueError,
+                                "field value is required for Const");
+                return NULL;
+        }
         p = (stmt_ty)PyArena_Malloc(arena, sizeof(*p));
         if (!p)
                 return NULL;
         p->kind = Const_kind;
         p->v.Const.name = name;
+        p->v.Const.value = value;
         p->lineno = lineno;
         p->col_offset = col_offset;
         return p;
@@ -2551,9 +2559,14 @@ ast2obj_stmt(void* _o)
         case Const_kind:
                 result = PyType_GenericNew(Const_type, NULL, NULL);
                 if (!result) goto failed;
-                value = ast2obj_stmt(o->v.Const.name);
+                value = ast2obj_identifier(o->v.Const.name);
                 if (!value) goto failed;
                 if (PyObject_SetAttrString(result, "name", value) == -1)
+                        goto failed;
+                Py_DECREF(value);
+                value = ast2obj_expr(o->v.Const.value);
+                if (!value) goto failed;
+                if (PyObject_SetAttrString(result, "value", value) == -1)
                         goto failed;
                 Py_DECREF(value);
                 break;
@@ -4664,13 +4677,14 @@ obj2ast_stmt(PyObject* obj, stmt_ty* out, PyArena* arena)
                 return 1;
         }
         if (isinstance) {
-                stmt_ty name;
+                identifier name;
+                expr_ty value;
 
                 if (PyObject_HasAttrString(obj, "name")) {
                         int res;
                         tmp = PyObject_GetAttrString(obj, "name");
                         if (tmp == NULL) goto failed;
-                        res = obj2ast_stmt(tmp, &name, arena);
+                        res = obj2ast_identifier(tmp, &name, arena);
                         if (res != 0) goto failed;
                         Py_XDECREF(tmp);
                         tmp = NULL;
@@ -4678,7 +4692,19 @@ obj2ast_stmt(PyObject* obj, stmt_ty* out, PyArena* arena)
                         PyErr_SetString(PyExc_TypeError, "required field \"name\" missing from Const");
                         return 1;
                 }
-                *out = Const(name, lineno, col_offset, arena);
+                if (PyObject_HasAttrString(obj, "value")) {
+                        int res;
+                        tmp = PyObject_GetAttrString(obj, "value");
+                        if (tmp == NULL) goto failed;
+                        res = obj2ast_expr(tmp, &value, arena);
+                        if (res != 0) goto failed;
+                        Py_XDECREF(tmp);
+                        tmp = NULL;
+                } else {
+                        PyErr_SetString(PyExc_TypeError, "required field \"value\" missing from Const");
+                        return 1;
+                }
+                *out = Const(name, value, lineno, col_offset, arena);
                 if (*out == NULL) goto failed;
                 return 0;
         }
