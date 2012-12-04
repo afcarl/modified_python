@@ -2177,7 +2177,9 @@ compiler_visit_stmt(struct compiler *c, stmt_ty s)
     case Global_kind:
         break;
     case Const_kind:
-        // compiler_visit_stmt(c, s->v.Const.name);
+        VISIT(c, expr, s->v.Const.value);
+        ADDOP(c, DUP_TOP);
+        VISIT(c, expr, s->v.Const.name);
         break;
     case Expr_kind:
         if (c->c_interactive && c->c_nestlevel <= 1) {
