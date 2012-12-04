@@ -358,18 +358,19 @@ class Compare(Node):
         return "Compare(%s, %s)" % (repr(self.expr), repr(self.ops))
 
 class Const(Node):
-    def __init__(self, value, lineno=None):
-        self.value = value
+    def __init__(self, name, expr, lineno=None):
+        self.name = name
+        self.expr = expr
         self.lineno = lineno
 
     def getChildren(self):
-        return self.value,
+        return (self.name, self.expr)
 
     def getChildNodes(self):
         return ()
 
     def __repr__(self):
-        return "Const(%s)" % (repr(self.value),)
+        return "Const(%s, %s)" % (repr(self.name), repr(self.expr))
 
 class Continue(Node):
     def __init__(self, lineno=None):

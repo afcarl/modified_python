@@ -2660,11 +2660,22 @@ ast_for_global_stmt(struct compiling *c, const node *n)
 static stmt_ty
 ast_for_const_stmt(struct compiling *c, const node *n)
 {
-//     /* const_stmt: 'const' expr_stmt */
-//     stmt_ty s;
-//     s = ast_for_expr_stmt(c, CHILD(n, 1));
-//     return Const(s, LINENO(n), n->n_col_offset, c->c_arena);
-    return NULL;
+    // const_stmt: 'const' NAME '=' test
+    identifier name;
+    expr_ty expression;
+
+    // Find the name of the const variable
+    REQ(n, const_stmt);
+    name = CHILD(n, 1);
+    if (!name)
+        return NULL;
+
+    // Find the value of the const variable
+    expression = ast_for_expr(c, CHILD(n, 3));
+    if (!expression)
+        return NULL;
+
+    return Const(name, expression, LINENO(n), n->n_col_offset, c->c_arena);
 }
 
 static stmt_ty
