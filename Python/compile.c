@@ -2127,8 +2127,6 @@ compiler_visit_stmt(struct compiler *c, stmt_ty s)
         return compiler_augassign(c, s);
     case Print_kind:
         return compiler_print(c, s);
-    case Const_kind:
-        break;
     case For_kind:
         return compiler_for(c, s);
     case While_kind:
@@ -2177,6 +2175,9 @@ compiler_visit_stmt(struct compiler *c, stmt_ty s)
         ADDOP(c, EXEC_STMT);
         break;
     case Global_kind:
+        break;
+    case Const_kind:
+        compiler_visit_stmt(c, s->v.Const.name);
         break;
     case Expr_kind:
         if (c->c_interactive && c->c_nestlevel <= 1) {
