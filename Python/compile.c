@@ -2125,6 +2125,8 @@ compiler_visit_stmt(struct compiler *c, stmt_ty s)
         break;
     case AugAssign_kind:
         return compiler_augassign(c, s);
+    case ConstAssign_kind:
+        break;
     case Print_kind:
         return compiler_print(c, s);
     case For_kind:

@@ -2169,8 +2169,9 @@ static stmt_ty
 ast_for_expr_stmt(struct compiling *c, const node *n)
 {
     REQ(n, expr_stmt);
-    /* expr_stmt: testlist (augassign (yield_expr|testlist)
-                | ('=' (yield_expr|testlist))*)
+    /* expr_stmt:   ((testlist (augassign (yield_expr|testlist) | 
+                        ('=' (yield_expr|testlist))*)) |
+                    ('const' atom '=' test))
        testlist: test (',' test)* [',']
        augassign: '+=' | '-=' | '*=' | '/=' | '%=' | '&=' | '|=' | '^='
                 | '<<=' | '>>=' | '**=' | '//='
@@ -2181,8 +2182,24 @@ ast_for_expr_stmt(struct compiling *c, const node *n)
         expr_ty e = ast_for_testlist(c, CHILD(n, 0));
         if (!e)
             return NULL;
-
         return Expr(e, LINENO(n), n->n_col_offset, c->c_arena);
+    }
+    else if (STR(CHILD(n, 0)) && !strcmp(STR(CHILD(n, 0)), "const")) {
+        expr_ty target;
+        expr_ty value;
+
+        /* a normal assignment */
+        REQ(CHILD(n, 1), atom);
+        REQ(CHILD(n, 2), EQUAL);
+        REQ(CHILD(n, 3), test);
+        target = ast_for_atom(c, CHILD(n, 1));
+        if (!target)
+            return NULL;
+        value = ast_for_expr(c, CHILD(n, 3));
+        if (!value) {
+            return NULL;
+        }
+        return ConstAssign(target, value, LINENO(n), n->n_col_offset, c->c_arena);
     }
     else if (TYPE(CHILD(n, 1)) == augassign) {
         expr_ty expr1, expr2;

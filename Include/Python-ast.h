@@ -60,12 +60,12 @@ struct _mod {
 };
 
 enum _stmt_kind {FunctionDef_kind=1, ClassDef_kind=2, Return_kind=3,
-                  Delete_kind=4, Assign_kind=5, AugAssign_kind=6, Print_kind=7,
-                  For_kind=8, While_kind=9, If_kind=10, With_kind=11,
-                  Raise_kind=12, TryExcept_kind=13, TryFinally_kind=14,
-                  Assert_kind=15, Import_kind=16, ImportFrom_kind=17,
-                  Exec_kind=18, Global_kind=19, Expr_kind=20, Pass_kind=21,
-                  Break_kind=22, Continue_kind=23};
+                  Delete_kind=4, Assign_kind=5, AugAssign_kind=6,
+                  ConstAssign_kind=7, Print_kind=8, For_kind=9, While_kind=10,
+                  If_kind=11, With_kind=12, Raise_kind=13, TryExcept_kind=14,
+                  TryFinally_kind=15, Assert_kind=16, Import_kind=17,
+                  ImportFrom_kind=18, Exec_kind=19, Global_kind=20,
+                  Expr_kind=21, Pass_kind=22, Break_kind=23, Continue_kind=24};
 struct _stmt {
         enum _stmt_kind kind;
         union {
@@ -101,6 +101,11 @@ struct _stmt {
                         operator_ty op;
                         expr_ty value;
                 } AugAssign;
+                
+                struct {
+                        expr_ty target;
+                        expr_ty value;
+                } ConstAssign;
                 
                 struct {
                         expr_ty dest;
@@ -399,6 +404,9 @@ stmt_ty _Py_Assign(asdl_seq * targets, expr_ty value, int lineno, int
 #define AugAssign(a0, a1, a2, a3, a4, a5) _Py_AugAssign(a0, a1, a2, a3, a4, a5)
 stmt_ty _Py_AugAssign(expr_ty target, operator_ty op, expr_ty value, int
                       lineno, int col_offset, PyArena *arena);
+#define ConstAssign(a0, a1, a2, a3, a4) _Py_ConstAssign(a0, a1, a2, a3, a4)
+stmt_ty _Py_ConstAssign(expr_ty target, expr_ty value, int lineno, int
+                        col_offset, PyArena *arena);
 #define Print(a0, a1, a2, a3, a4, a5) _Py_Print(a0, a1, a2, a3, a4, a5)
 stmt_ty _Py_Print(expr_ty dest, asdl_seq * values, bool nl, int lineno, int
                   col_offset, PyArena *arena);

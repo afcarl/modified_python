@@ -70,6 +70,11 @@ static char *AugAssign_fields[]={
         "op",
         "value",
 };
+static PyTypeObject *ConstAssign_type;
+static char *ConstAssign_fields[]={
+        "target",
+        "value",
+};
 static PyTypeObject *Print_type;
 static char *Print_fields[]={
         "dest",
@@ -700,6 +705,9 @@ static int init_types(void)
         if (!Assign_type) return 0;
         AugAssign_type = make_type("AugAssign", stmt_type, AugAssign_fields, 3);
         if (!AugAssign_type) return 0;
+        ConstAssign_type = make_type("ConstAssign", stmt_type,
+                                     ConstAssign_fields, 2);
+        if (!ConstAssign_type) return 0;
         Print_type = make_type("Print", stmt_type, Print_fields, 3);
         if (!Print_type) return 0;
         For_type = make_type("For", stmt_type, For_fields, 4);
@@ -1164,6 +1172,32 @@ AugAssign(expr_ty target, operator_ty op, expr_ty value, int lineno, int
         p->v.AugAssign.target = target;
         p->v.AugAssign.op = op;
         p->v.AugAssign.value = value;
+        p->lineno = lineno;
+        p->col_offset = col_offset;
+        return p;
+}
+
+stmt_ty
+ConstAssign(expr_ty target, expr_ty value, int lineno, int col_offset, PyArena
+            *arena)
+{
+        stmt_ty p;
+        if (!target) {
+                PyErr_SetString(PyExc_ValueError,
+                                "field target is required for ConstAssign");
+                return NULL;
+        }
+        if (!value) {
+                PyErr_SetString(PyExc_ValueError,
+                                "field value is required for ConstAssign");
+                return NULL;
+        }
+        p = (stmt_ty)PyArena_Malloc(arena, sizeof(*p));
+        if (!p)
+                return NULL;
+        p->kind = ConstAssign_kind;
+        p->v.ConstAssign.target = target;
+        p->v.ConstAssign.value = value;
         p->lineno = lineno;
         p->col_offset = col_offset;
         return p;
@@ -2294,6 +2328,20 @@ ast2obj_stmt(void* _o)
                         goto failed;
                 Py_DECREF(value);
                 value = ast2obj_expr(o->v.AugAssign.value);
+                if (!value) goto failed;
+                if (PyObject_SetAttrString(result, "value", value) == -1)
+                        goto failed;
+                Py_DECREF(value);
+                break;
+        case ConstAssign_kind:
+                result = PyType_GenericNew(ConstAssign_type, NULL, NULL);
+                if (!result) goto failed;
+                value = ast2obj_expr(o->v.ConstAssign.target);
+                if (!value) goto failed;
+                if (PyObject_SetAttrString(result, "target", value) == -1)
+                        goto failed;
+                Py_DECREF(value);
+                value = ast2obj_expr(o->v.ConstAssign.value);
                 if (!value) goto failed;
                 if (PyObject_SetAttrString(result, "value", value) == -1)
                         goto failed;
@@ -3848,6 +3896,42 @@ obj2ast_stmt(PyObject* obj, stmt_ty* out, PyArena* arena)
                         return 1;
                 }
                 *out = AugAssign(target, op, value, lineno, col_offset, arena);
+                if (*out == NULL) goto failed;
+                return 0;
+        }
+        isinstance = PyObject_IsInstance(obj, (PyObject*)ConstAssign_type);
+        if (isinstance == -1) {
+                return 1;
+        }
+        if (isinstance) {
+                expr_ty target;
+                expr_ty value;
+
+                if (PyObject_HasAttrString(obj, "target")) {
+                        int res;
+                        tmp = PyObject_GetAttrString(obj, "target");
+                        if (tmp == NULL) goto failed;
+                        res = obj2ast_expr(tmp, &target, arena);
+                        if (res != 0) goto failed;
+                        Py_XDECREF(tmp);
+                        tmp = NULL;
+                } else {
+                        PyErr_SetString(PyExc_TypeError, "required field \"target\" missing from ConstAssign");
+                        return 1;
+                }
+                if (PyObject_HasAttrString(obj, "value")) {
+                        int res;
+                        tmp = PyObject_GetAttrString(obj, "value");
+                        if (tmp == NULL) goto failed;
+                        res = obj2ast_expr(tmp, &value, arena);
+                        if (res != 0) goto failed;
+                        Py_XDECREF(tmp);
+                        tmp = NULL;
+                } else {
+                        PyErr_SetString(PyExc_TypeError, "required field \"value\" missing from ConstAssign");
+                        return 1;
+                }
+                *out = ConstAssign(target, value, lineno, col_offset, arena);
                 if (*out == NULL) goto failed;
                 return 0;
         }
@@ -6610,6 +6694,8 @@ init_ast(void)
             return;
         if (PyDict_SetItemString(d, "AugAssign", (PyObject*)AugAssign_type) <
             0) return;
+        if (PyDict_SetItemString(d, "ConstAssign", (PyObject*)ConstAssign_type)
+            < 0) return;
         if (PyDict_SetItemString(d, "Print", (PyObject*)Print_type) < 0) return;
         if (PyDict_SetItemString(d, "For", (PyObject*)For_type) < 0) return;
         if (PyDict_SetItemString(d, "While", (PyObject*)While_type) < 0) return;
