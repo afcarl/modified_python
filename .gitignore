@@ -15,6 +15,9 @@ config.log
 config.status
 pyconfig.h
 
+# Doc tools (installed durring Docs build?)
+Doc/tools/
+
 # Files added after make
 *.o
 *.pyc
