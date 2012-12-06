@@ -163,6 +163,7 @@ static int compiler_visit_stmt(struct compiler *, stmt_ty);
 static int compiler_visit_keyword(struct compiler *, keyword_ty);
 static int compiler_visit_expr(struct compiler *, expr_ty);
 static int compiler_augassign(struct compiler *, stmt_ty);
+static int compiler_constassign(struct compiler *, stmt_ty);
 static int compiler_visit_slice(struct compiler *, slice_ty,
                                 expr_context_ty);
 
@@ -2126,7 +2127,7 @@ compiler_visit_stmt(struct compiler *c, stmt_ty s)
     case AugAssign_kind:
         return compiler_augassign(c, s);
     case ConstAssign_kind:
-        break;
+        return compiler_constassign(c, s);
     case Print_kind:
         return compiler_print(c, s);
     case For_kind:
@@ -3152,6 +3153,26 @@ compiler_augassign(struct compiler *c, stmt_ty s)
         VISIT(c, expr, s->v.AugAssign.value);
         ADDOP(c, inplace_binop(c, s->v.AugAssign.op));
         return compiler_nameop(c, e->v.Name.id, Store);
+    default:
+        PyErr_Format(PyExc_SystemError,
+            "invalid node type (%d) for augmented assignment",
+            e->kind);
+        return 0;
+    }
+    return 1;
+}
+
+static int
+compiler_constassign(struct compiler *c, stmt_ty s)
+{
+    expr_ty e = s->v.ConstAssign.target;
+    expr_ty auge;
+
+    assert(s->kind == ConstAssign_kind);
+
+    switch (e->kind) {
+    case Name_kind:
+        break;
     default:
         PyErr_Format(PyExc_SystemError,
             "invalid node type (%d) for augmented assignment",
