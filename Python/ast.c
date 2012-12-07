@@ -1610,7 +1610,6 @@ ast_for_binop(struct compiling *c, const node *n)
         expr1 = ast_for_expr(c, CHILD(n, 0));
         if (!expr1)
             return NULL;
-
         expr2 = ast_for_expr(c, CHILD(n, 2));
         if (!expr2)
             return NULL;
@@ -2189,13 +2188,16 @@ ast_for_expr_stmt(struct compiling *c, const node *n)
         expr_ty value;
 
         /* a normal assignment */
-        REQ(CHILD(n, 1), atom);
+        REQ(CHILD(n, 1), expr);
         REQ(CHILD(n, 2), EQUAL);
         REQ(CHILD(n, 3), test);
-        target = ast_for_atom(c, CHILD(n, 1));
+        target = ast_for_expr(c, CHILD(n, 1));
         if (!target)
             return NULL;
+        if(!set_context(c, target, Store, CHILD(n, 1)))
+            return NULL;
         value = ast_for_expr(c, CHILD(n, 3));
+
         if (!value) {
             return NULL;
         }

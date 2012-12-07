@@ -3169,16 +3169,9 @@ compiler_constassign(struct compiler *c, stmt_ty s)
     expr_ty auge;
 
     assert(s->kind == ConstAssign_kind);
-
-    switch (e->kind) {
-    case Name_kind:
-        break;
-    default:
-        PyErr_Format(PyExc_SystemError,
-            "invalid node type (%d) for augmented assignment",
-            e->kind);
-        return 0;
-    }
+    VISIT(c, expr, s->v.ConstAssign.value);
+    ADDOP(c, DUP_TOP);
+    VISIT(c, expr, s->v.ConstAssign.target);
     return 1;
 }
 

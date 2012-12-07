@@ -1056,6 +1056,10 @@ symtable_visit_stmt(struct symtable *st, stmt_ty s)
         VISIT(st, expr, s->v.AugAssign.target);
         VISIT(st, expr, s->v.AugAssign.value);
         break;
+    case ConstAssign_kind:
+        VISIT(st, expr, s->v.ConstAssign.target);
+        VISIT(st, expr, s->v.ConstAssign.value);
+        break;
     case Print_kind:
         if (s->v.Print.dest)
             VISIT(st, expr, s->v.Print.dest);

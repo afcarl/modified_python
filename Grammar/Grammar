@@ -36,7 +36,7 @@ small_stmt: (expr_stmt | print_stmt  | del_stmt | pass_stmt | flow_stmt |
              import_stmt | global_stmt | exec_stmt | assert_stmt)
 expr_stmt: ((testlist (augassign (yield_expr|testlist) | 
                   ('=' (yield_expr|testlist))*)) |
-            ('const' atom '=' test))
+            ('const' expr '=' test))
 augassign: ('+=' | '-=' | '*=' | '/=' | '%=' | '&=' | '|=' | '^=' |
             '<<=' | '>>=' | '**=' | '//=')
 # For normal assignments, additional restrictions enforced by the interpreter
