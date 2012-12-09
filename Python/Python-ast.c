@@ -265,6 +265,11 @@ static char *Name_fields[]={
         "id",
         "ctx",
 };
+static PyTypeObject *Const_type;
+static char *Const_fields[]={
+        "id",
+        "ctx",
+};
 static PyTypeObject *List_type;
 static char *List_fields[]={
         "elts",
@@ -788,6 +793,8 @@ static int init_types(void)
         if (!Subscript_type) return 0;
         Name_type = make_type("Name", expr_type, Name_fields, 2);
         if (!Name_type) return 0;
+        Const_type = make_type("Const", expr_type, Const_fields, 2);
+        if (!Const_type) return 0;
         List_type = make_type("List", expr_type, List_fields, 2);
         if (!List_type) return 0;
         Tuple_type = make_type("Tuple", expr_type, Tuple_fields, 2);
@@ -1974,6 +1981,32 @@ Name(identifier id, expr_context_ty ctx, int lineno, int col_offset, PyArena
 }
 
 expr_ty
+Const(identifier id, expr_context_ty ctx, int lineno, int col_offset, PyArena
+      *arena)
+{
+        expr_ty p;
+        if (!id) {
+                PyErr_SetString(PyExc_ValueError,
+                                "field id is required for Const");
+                return NULL;
+        }
+        if (!ctx) {
+                PyErr_SetString(PyExc_ValueError,
+                                "field ctx is required for Const");
+                return NULL;
+        }
+        p = (expr_ty)PyArena_Malloc(arena, sizeof(*p));
+        if (!p)
+                return NULL;
+        p->kind = Const_kind;
+        p->v.Const.id = id;
+        p->v.Const.ctx = ctx;
+        p->lineno = lineno;
+        p->col_offset = col_offset;
+        return p;
+}
+
+expr_ty
 List(asdl_seq * elts, expr_context_ty ctx, int lineno, int col_offset, PyArena
      *arena)
 {
@@ -2926,6 +2959,20 @@ ast2obj_expr(void* _o)
                         goto failed;
                 Py_DECREF(value);
                 value = ast2obj_expr_context(o->v.Name.ctx);
+                if (!value) goto failed;
+                if (PyObject_SetAttrString(result, "ctx", value) == -1)
+                        goto failed;
+                Py_DECREF(value);
+                break;
+        case Const_kind:
+                result = PyType_GenericNew(Const_type, NULL, NULL);
+                if (!result) goto failed;
+                value = ast2obj_identifier(o->v.Const.id);
+                if (!value) goto failed;
+                if (PyObject_SetAttrString(result, "id", value) == -1)
+                        goto failed;
+                Py_DECREF(value);
+                value = ast2obj_expr_context(o->v.Const.ctx);
                 if (!value) goto failed;
                 if (PyObject_SetAttrString(result, "ctx", value) == -1)
                         goto failed;
@@ -5736,6 +5783,42 @@ obj2ast_expr(PyObject* obj, expr_ty* out, PyArena* arena)
                 if (*out == NULL) goto failed;
                 return 0;
         }
+        isinstance = PyObject_IsInstance(obj, (PyObject*)Const_type);
+        if (isinstance == -1) {
+                return 1;
+        }
+        if (isinstance) {
+                identifier id;
+                expr_context_ty ctx;
+
+                if (PyObject_HasAttrString(obj, "id")) {
+                        int res;
+                        tmp = PyObject_GetAttrString(obj, "id");
+                        if (tmp == NULL) goto failed;
+                        res = obj2ast_identifier(tmp, &id, arena);
+                        if (res != 0) goto failed;
+                        Py_XDECREF(tmp);
+                        tmp = NULL;
+                } else {
+                        PyErr_SetString(PyExc_TypeError, "required field \"id\" missing from Const");
+                        return 1;
+                }
+                if (PyObject_HasAttrString(obj, "ctx")) {
+                        int res;
+                        tmp = PyObject_GetAttrString(obj, "ctx");
+                        if (tmp == NULL) goto failed;
+                        res = obj2ast_expr_context(tmp, &ctx, arena);
+                        if (res != 0) goto failed;
+                        Py_XDECREF(tmp);
+                        tmp = NULL;
+                } else {
+                        PyErr_SetString(PyExc_TypeError, "required field \"ctx\" missing from Const");
+                        return 1;
+                }
+                *out = Const(id, ctx, lineno, col_offset, arena);
+                if (*out == NULL) goto failed;
+                return 0;
+        }
         isinstance = PyObject_IsInstance(obj, (PyObject*)List_type);
         if (isinstance == -1) {
                 return 1;
@@ -6751,6 +6834,7 @@ init_ast(void)
         if (PyDict_SetItemString(d, "Subscript", (PyObject*)Subscript_type) <
             0) return;
         if (PyDict_SetItemString(d, "Name", (PyObject*)Name_type) < 0) return;
+        if (PyDict_SetItemString(d, "Const", (PyObject*)Const_type) < 0) return;
         if (PyDict_SetItemString(d, "List", (PyObject*)List_type) < 0) return;
         if (PyDict_SetItemString(d, "Tuple", (PyObject*)Tuple_type) < 0) return;
         if (PyDict_SetItemString(d, "expr_context",

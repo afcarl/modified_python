@@ -194,7 +194,8 @@ enum _expr_kind {BoolOp_kind=1, BinOp_kind=2, UnaryOp_kind=3, Lambda_kind=4,
                   SetComp_kind=9, DictComp_kind=10, GeneratorExp_kind=11,
                   Yield_kind=12, Compare_kind=13, Call_kind=14, Repr_kind=15,
                   Num_kind=16, Str_kind=17, Attribute_kind=18,
-                  Subscript_kind=19, Name_kind=20, List_kind=21, Tuple_kind=22};
+                  Subscript_kind=19, Name_kind=20, Const_kind=21, List_kind=22,
+                  Tuple_kind=23};
 struct _expr {
         enum _expr_kind kind;
         union {
@@ -301,6 +302,11 @@ struct _expr {
                         identifier id;
                         expr_context_ty ctx;
                 } Name;
+                
+                struct {
+                        identifier id;
+                        expr_context_ty ctx;
+                } Const;
                 
                 struct {
                         asdl_seq *elts;
@@ -510,6 +516,9 @@ expr_ty _Py_Subscript(expr_ty value, slice_ty slice, expr_context_ty ctx, int
 #define Name(a0, a1, a2, a3, a4) _Py_Name(a0, a1, a2, a3, a4)
 expr_ty _Py_Name(identifier id, expr_context_ty ctx, int lineno, int
                  col_offset, PyArena *arena);
+#define Const(a0, a1, a2, a3, a4) _Py_Const(a0, a1, a2, a3, a4)
+expr_ty _Py_Const(identifier id, expr_context_ty ctx, int lineno, int
+                  col_offset, PyArena *arena);
 #define List(a0, a1, a2, a3, a4) _Py_List(a0, a1, a2, a3, a4)
 expr_ty _Py_List(asdl_seq * elts, expr_context_ty ctx, int lineno, int
                  col_offset, PyArena *arena);

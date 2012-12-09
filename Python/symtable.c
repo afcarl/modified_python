@@ -1185,6 +1185,7 @@ symtable_visit_stmt(struct symtable *st, stmt_ty s)
 static int
 symtable_visit_expr(struct symtable *st, expr_ty e)
 {
+    printf("e->kind: %d\n", e->kind);
     switch (e->kind) {
     case BoolOp_kind:
         VISIT_SEQ(st, expr, e->v.BoolOp.values);
@@ -1282,6 +1283,9 @@ symtable_visit_expr(struct symtable *st, expr_ty e)
         if (!symtable_add_def(st, e->v.Name.id,
                               e->v.Name.ctx == Load ? USE : DEF_LOCAL))
             return 0;
+        break;
+    case Const_kind:
+        puts("Hello, world!");
         break;
     /* child nodes of List and Tuple will have expr_context set */
     case List_kind:
