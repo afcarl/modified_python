@@ -27,3 +27,4 @@ python.exe-gdb.py
 
 # Files changed automatically by cpython
 Python/graminit.c
+Python-ast.*
