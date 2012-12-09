@@ -24,3 +24,6 @@ build/
 libpython2.7.a
 python.exe
 python.exe-gdb.py
+
+# Files changed automatically by cpython
+Python/graminit.c
