@@ -28,3 +28,6 @@ python.exe-gdb.py
 # Files changed automatically by cpython
 Python/graminit.c
 Python-ast.*
+
+#Tools needed to build Docs
+Doc/tools
