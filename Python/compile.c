@@ -3108,6 +3108,8 @@ compiler_visit_expr(struct compiler *c, expr_ty e)
     case Name_kind:
         return compiler_nameop(c, e->v.Name.id, e->v.Name.ctx);
     /* child nodes of List and Tuple will have expr_context set */
+    case Const_kind:
+        return compiler_nameop(c, e->v.Const.id, e->v.Const.ctx);
     case List_kind:
         return compiler_list(c, e);
     case Tuple_kind:

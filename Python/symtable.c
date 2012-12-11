@@ -1284,7 +1284,9 @@ symtable_visit_expr(struct symtable *st, expr_ty e)
             return 0;
         break;
     case Const_kind:
-        puts("Hello, world!");
+        if (!symtable_add_def(st, e->v.Const.id,
+                              e->v.Const.ctx == Load ? USE : DEF_LOCAL))
+            return 0;
         break;
     /* child nodes of List and Tuple will have expr_context set */
     case List_kind:

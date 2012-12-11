@@ -400,6 +400,12 @@ set_context(struct compiling *c, expr_ty e, expr_context_ty ctx, const node *n)
                     return 0;
             e->v.Name.ctx = ctx;
             break;
+        case Const_kind:
+            if (ctx == Store && !forbidden_check(c, n,
+                                PyBytes_AS_STRING(e->v.Const.id)))
+                    return 0;
+            e->v.Const.ctx = ctx;
+            break;
         case List_kind:
             e->v.List.ctx = ctx;
             s = e->v.List.elts;
@@ -2192,10 +2198,11 @@ ast_for_expr_stmt(struct compiling *c, const node *n)
         REQ(CHILD(n, 2), EQUAL);
         REQ(CHILD(n, 3), test);
 
+
         PyObject *name = NEW_IDENTIFIER(CHILD(n, 1));
         if (!name)
             return NULL;
-        target = Name(name, Load, LINENO(n), n->n_col_offset, c->c_arena);
+        target = Const(name, Load, LINENO(n), n->n_col_offset, c->c_arena);
 
         if (!target)
             return NULL;
