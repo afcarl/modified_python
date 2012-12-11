@@ -70,6 +70,10 @@ PyAPI_FUNC(void) PySymtable_Free(struct symtable *);
 
 #define DEF_BOUND (DEF_LOCAL | DEF_PARAM | DEF_IMPORT)
 
+#define DEF_CONST 2<<13      /* constant variable */
+#define USE_CONST (USE | DEF_CONST)
+#define DEF_LOCAL_CONST (DEF_LOCAL | DEF_CONST)
+
 /* GLOBAL_EXPLICIT and GLOBAL_IMPLICIT are used internally by the symbol
    table.  GLOBAL is returned from PyST_GetScope() for either of them.
    It is stored in ste_symbols at bits 12-14.

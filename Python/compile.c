@@ -2343,6 +2343,12 @@ compiler_nameop(struct compiler *c, identifier name, expr_context_ty ctx)
     if (!mangled)
         return 0;
 
+    if (PyST_IsConst(c->u->u_ste, mangled)) {
+        printf ("CONST!!!\n");
+    } else {
+        printf ("NOT CONST!!!\n");
+    }
+
     op = 0;
     optype = OP_NAME;
     scope = PyST_GetScope(c->u->u_ste, mangled);

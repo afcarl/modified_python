@@ -311,6 +311,21 @@ PyST_GetScope(PySTEntryObject *ste, PyObject *name)
     return (PyInt_AS_LONG(v) >> SCOPE_OFF) & SCOPE_MASK;
 }
 
+unsigned short int
+PyST_IsConst(PySTEntryObject *ste, PyObject *name)
+{
+    PyObject *v = PyDict_GetItem(ste->ste_symbols, name);
+    if (!v)
+        return 0;
+    assert(PyInt_Check(v));
+    printf ("%ld\n", PyInt_AS_LONG(v));
+    if (PyInt_AS_LONG(v) & DEF_CONST) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
 
 /* Analyze raw symbol information to determine scope of each name.
 
@@ -897,6 +912,7 @@ symtable_add_def(struct symtable *st, PyObject *name, int flag)
         val |= flag;
     } else
         val = flag;
+    printf("If odd, it's a const: %d\n", val>>14);
     o = PyInt_FromLong(val);
     if (o == NULL)
         goto error;
@@ -1285,7 +1301,7 @@ symtable_visit_expr(struct symtable *st, expr_ty e)
         break;
     case Const_kind:
         if (!symtable_add_def(st, e->v.Const.id,
-                              e->v.Const.ctx == Load ? USE : DEF_LOCAL))
+                              e->v.Const.ctx == Load ? USE_CONST : DEF_LOCAL_CONST))
             return 0;
         break;
     /* child nodes of List and Tuple will have expr_context set */
