@@ -1185,7 +1185,6 @@ symtable_visit_stmt(struct symtable *st, stmt_ty s)
 static int
 symtable_visit_expr(struct symtable *st, expr_ty e)
 {
-    printf("e->kind: %d\n", e->kind);
     switch (e->kind) {
     case BoolOp_kind:
         VISIT_SEQ(st, expr, e->v.BoolOp.values);

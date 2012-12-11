@@ -2188,10 +2188,15 @@ ast_for_expr_stmt(struct compiling *c, const node *n)
         expr_ty value;
 
         /* a normal assignment */
-        REQ(CHILD(n, 1), expr);
+        REQ(CHILD(n, 1), NAME);
         REQ(CHILD(n, 2), EQUAL);
         REQ(CHILD(n, 3), test);
-        target = ast_for_expr(c, CHILD(n, 1));
+
+        PyObject *name = NEW_IDENTIFIER(CHILD(n, 1));
+        if (!name)
+            return NULL;
+        target = Name(name, Load, LINENO(n), n->n_col_offset, c->c_arena);
+
         if (!target)
             return NULL;
         if(!set_context(c, target, Store, CHILD(n, 1)))
