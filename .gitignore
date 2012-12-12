@@ -1,6 +1,7 @@
 PC
 PCbuild
 .hg*
+junk*
 
 # Files added after configure
 Makefile

@@ -409,27 +409,6 @@ analyze_name(PySTEntryObject *ste, PyObject *dict, PyObject *name, long flags,
         return 1;
     }
 
-    if (flags & DEF_CONST) {
-        printf("const!");
-        if (flags & DEF_PARAM) {
-            PyErr_Format(PyExc_SyntaxError,
-                         "name '%s' is local and const",
-                         PyString_AS_STRING(name));
-            PyErr_SyntaxLocation(ste->ste_table->st_filename,
-                                 ste->ste_lineno);
-
-            return 0;
-        }
-        SET_SCOPE(dict, name, LOCAL);
-        if (PyDict_SetItem(local, name, Py_None) < 0)
-            return 0;
-        if (PyDict_GetItem(global, name)) {
-            if (PyDict_DelItem(global, name) < 0)
-                return 0;
-        }
-        return 1;
-    }
-
     if (flags & DEF_BOUND) {
         SET_SCOPE(dict, name, LOCAL);
         if (PyDict_SetItem(local, name, Py_None) < 0)
