@@ -411,7 +411,7 @@ analyze_name(PySTEntryObject *ste, PyObject *dict, PyObject *name, long flags,
 
     if (flags & DEF_CONST) {
         printf("const!");
-        if (flags & DEF_LOCAL) {
+        if (flags & DEF_PARAM) {
             PyErr_Format(PyExc_SyntaxError,
                          "name '%s' is local and const",
                          PyString_AS_STRING(name));
