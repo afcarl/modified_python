@@ -307,6 +307,7 @@ PyST_GetScope(PySTEntryObject *ste, PyObject *name)
     PyObject *v = PyDict_GetItem(ste->ste_symbols, name);
     if (!v)
         return 0;
+    
     assert(PyInt_Check(v));
     return (PyInt_AS_LONG(v) >> SCOPE_OFF) & SCOPE_MASK;
 }
@@ -318,13 +319,14 @@ PyST_IsConst(PySTEntryObject *ste, PyObject *name)
     if (!v)
         return 0;
     assert(PyInt_Check(v));
-    printf ("%ld\n", PyInt_AS_LONG(v));
+    //printf ("%ld\n", PyInt_AS_LONG(v));
     if (PyInt_AS_LONG(v) & DEF_CONST) {
         return 1;
     } else {
         return 0;
     }
 }
+
 
 
 /* Analyze raw symbol information to determine scope of each name.
@@ -406,6 +408,28 @@ analyze_name(PySTEntryObject *ste, PyObject *dict, PyObject *name, long flags,
         }
         return 1;
     }
+
+    if (flags & DEF_CONST) {
+        printf("const!");
+        if (flags & DEF_PARAM) {
+            PyErr_Format(PyExc_SyntaxError,
+                         "name '%s' is local and const",
+                         PyString_AS_STRING(name));
+            PyErr_SyntaxLocation(ste->ste_table->st_filename,
+                                 ste->ste_lineno);
+
+            return 0;
+        }
+        SET_SCOPE(dict, name, LOCAL);
+        if (PyDict_SetItem(local, name, Py_None) < 0)
+            return 0;
+        if (PyDict_GetItem(global, name)) {
+            if (PyDict_DelItem(global, name) < 0)
+                return 0;
+        }
+        return 1;
+    }
+
     if (flags & DEF_BOUND) {
         SET_SCOPE(dict, name, LOCAL);
         if (PyDict_SetItem(local, name, Py_None) < 0)
@@ -912,7 +936,8 @@ symtable_add_def(struct symtable *st, PyObject *name, int flag)
         val |= flag;
     } else
         val = flag;
-    printf("If odd, it's a const: %d\n", val>>14);
+    //printf("If odd, it's a const: %d\n", val>>14);
+    //printf("If odd, it's a global: %d\n", val);
     o = PyInt_FromLong(val);
     if (o == NULL)
         goto error;
