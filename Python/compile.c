@@ -156,7 +156,7 @@ static int compiler_addop_i(struct compiler *, int, int);
 static int compiler_addop_j(struct compiler *, int, basicblock *, int);
 static basicblock *compiler_use_new_block(struct compiler *);
 static int compiler_error(struct compiler *, const char *);
-static int compiler_nameop(struct compiler *, identifier, expr_context_ty);
+static int compiler_nameop(struct compiler *, identifier, expr_context_ty, int);
 
 static PyCodeObject *compiler_mod(struct compiler *, mod_ty);
 static int compiler_visit_stmt(struct compiler *, stmt_ty);
@@ -1180,7 +1180,7 @@ compiler_body(struct compiler *c, asdl_seq *stmts)
         /* don't generate docstrings if -OO */
         i = 1;
         VISIT(c, expr, st->v.Expr.value);
-        if (!compiler_nameop(c, __doc__, Store))
+        if (!compiler_nameop(c, __doc__, Store, 0))
             return 0;
     }
     for (; i < asdl_seq_LEN(stmts); i++)
@@ -1347,7 +1347,7 @@ compiler_arguments(struct compiler *c, arguments_ty args)
             if (id == NULL) {
                 return 0;
             }
-            if (!compiler_nameop(c, id, Load)) {
+            if (!compiler_nameop(c, id, Load, 0)) {
                 Py_DECREF(id);
                 return 0;
             }
@@ -1409,7 +1409,7 @@ compiler_function(struct compiler *c, stmt_ty s)
         ADDOP_I(c, CALL_FUNCTION, 1);
     }
 
-    return compiler_nameop(c, s->v.FunctionDef.name, Store);
+    return compiler_nameop(c, s->v.FunctionDef.name, Store, 0);
 }
 
 static int
@@ -1437,7 +1437,7 @@ compiler_class(struct compiler *c, stmt_ty s)
     c->u->u_private = s->v.ClassDef.name;
     Py_INCREF(c->u->u_private);
     str = PyString_InternFromString("__name__");
-    if (!str || !compiler_nameop(c, str, Load)) {
+    if (!str || !compiler_nameop(c, str, Load, 0)) {
         Py_XDECREF(str);
         compiler_exit_scope(c);
         return 0;
@@ -1445,7 +1445,7 @@ compiler_class(struct compiler *c, stmt_ty s)
 
     Py_DECREF(str);
     str = PyString_InternFromString("__module__");
-    if (!str || !compiler_nameop(c, str, Store)) {
+    if (!str || !compiler_nameop(c, str, Store, 0)) {
         Py_XDECREF(str);
         compiler_exit_scope(c);
         return 0;
@@ -1473,7 +1473,7 @@ compiler_class(struct compiler *c, stmt_ty s)
     for (i = 0; i < asdl_seq_LEN(decos); i++) {
         ADDOP_I(c, CALL_FUNCTION, 1);
     }
-    if (!compiler_nameop(c, s->v.ClassDef.name, Store))
+    if (!compiler_nameop(c, s->v.ClassDef.name, Store, 0))
         return 0;
     return 1;
 }
@@ -1916,7 +1916,7 @@ compiler_import_as(struct compiler *c, identifier name, identifier asname)
             src = dot + 1;
         }
     }
-    return compiler_nameop(c, asname, Store);
+    return compiler_nameop(c, asname, Store, 0);
 }
 
 static int
@@ -1961,7 +1961,7 @@ compiler_import(struct compiler *c, stmt_ty s)
             if (dot)
                 tmp = PyString_FromStringAndSize(base,
                                                  dot - base);
-            r = compiler_nameop(c, tmp, Store);
+            r = compiler_nameop(c, tmp, Store, 0);
             if (dot) {
                 Py_DECREF(tmp);
             }
@@ -2041,7 +2041,7 @@ compiler_from_import(struct compiler *c, stmt_ty s)
         if (alias->asname)
             store_name = alias->asname;
 
-        if (!compiler_nameop(c, store_name, Store)) {
+        if (!compiler_nameop(c, store_name, Store, 0)) {
             Py_DECREF(names);
             return 0;
         }
@@ -2330,7 +2330,7 @@ inplace_binop(struct compiler *c, operator_ty op)
 }
 
 static int
-compiler_nameop(struct compiler *c, identifier name, expr_context_ty ctx)
+compiler_nameop(struct compiler *c, identifier name, expr_context_ty ctx, int is_const_assign)
 {
     int op, scope, arg;
     enum { OP_FAST, OP_GLOBAL, OP_DEREF, OP_NAME } optype;
@@ -2380,14 +2380,33 @@ compiler_nameop(struct compiler *c, identifier name, expr_context_ty ctx)
 
     /* XXX Leave assert here, but handle __doc__ and the like better */
     assert(scope || PyString_AS_STRING(name)[0] == '_');
+    int isConst = PyST_IsConst(c->u->u_ste, mangled);
+
 
     switch (optype) {
     case OP_DEREF:
         switch (ctx) {
-        case Load: op = LOAD_DEREF; break;
-        case Store: op = STORE_DEREF; break;
+        case Load: 
+            op = LOAD_DEREF; 
+            break;
+        case Store: 
+            if (isConst) {
+                PyErr_Format(PyExc_SyntaxError,
+                         "'%s' is a const",
+                         PyString_AS_STRING(name));
+                Py_DECREF(mangled);
+                return 0;
+            }
+            op = STORE_DEREF; break;
         case AugLoad:
         case AugStore:
+            if (isConst) {
+                PyErr_Format(PyExc_SyntaxError,
+                         "'%s' is a const",
+                         PyString_AS_STRING(name));
+                Py_DECREF(mangled);
+                return 0;
+            }
             break;
         case Del:
             PyErr_Format(PyExc_SyntaxError,
@@ -2403,13 +2422,40 @@ compiler_nameop(struct compiler *c, identifier name, expr_context_ty ctx)
             return 0;
         }
         break;
+
     case OP_FAST:
         switch (ctx) {
-        case Load: op = LOAD_FAST; break;
-        case Store: op = STORE_FAST; break;
-        case Del: op = DELETE_FAST; break;
+        case Load:
+            op = LOAD_FAST; 
+            break;
+        case Store:
+            if (isConst && !is_const_assign) {
+                PyErr_Format(PyExc_SyntaxError,
+                         "'%s' is a const",
+                         PyString_AS_STRING(name));
+                Py_DECREF(mangled);
+                return 0;
+            } else if (!isConst && is_const_assign) {
+                PyErr_Format(PyExc_SyntaxError,
+                         "cannot make '%s' a const: it already exists!",
+                         PyString_AS_STRING(name));
+                Py_DECREF(mangled);
+                return 0;
+            }
+            op = STORE_FAST; 
+            break;
+        case Del: 
+            op = DELETE_FAST; 
+            break;
         case AugLoad:
         case AugStore:
+            if (isConst) {
+                PyErr_Format(PyExc_SyntaxError,
+                         "'%s' is a const",
+                         PyString_AS_STRING(name));
+                Py_DECREF(mangled);
+                return 0;
+            }
             break;
         case Param:
         default:
@@ -2420,13 +2466,40 @@ compiler_nameop(struct compiler *c, identifier name, expr_context_ty ctx)
         ADDOP_O(c, op, mangled, varnames);
         Py_DECREF(mangled);
         return 1;
+
     case OP_GLOBAL:
         switch (ctx) {
-        case Load: op = LOAD_GLOBAL; break;
-        case Store: op = STORE_GLOBAL; break;
-        case Del: op = DELETE_GLOBAL; break;
+        case Load: 
+            op = LOAD_GLOBAL; 
+            break;
+        case Store:
+            if (isConst && !is_const_assign) {
+                PyErr_Format(PyExc_SyntaxError,
+                         "'%s' is a const",
+                         PyString_AS_STRING(name));
+                Py_DECREF(mangled);
+                return 0;
+            } else if (!isConst && is_const_assign) {
+                PyErr_Format(PyExc_SyntaxError,
+                         "cannot make '%s' a const: it already exists!",
+                         PyString_AS_STRING(name));
+                Py_DECREF(mangled);
+                return 0;
+            }
+            op = STORE_GLOBAL; 
+            break;
+        case Del: 
+            op = DELETE_GLOBAL; 
+            break;
         case AugLoad:
         case AugStore:
+            if (isConst) {
+                PyErr_Format(PyExc_SyntaxError,
+                         "'%s' is a const",
+                         PyString_AS_STRING(name));
+                Py_DECREF(mangled);
+                return 0;
+            }
             break;
         case Param:
         default:
@@ -2435,6 +2508,7 @@ compiler_nameop(struct compiler *c, identifier name, expr_context_ty ctx)
             return 0;
         }
         break;
+
     case OP_NAME:
         switch (ctx) {
         case Load: op = LOAD_NAME; break;
@@ -3112,10 +3186,10 @@ compiler_visit_expr(struct compiler *c, expr_ty e)
         }
         break;
     case Name_kind:
-        return compiler_nameop(c, e->v.Name.id, e->v.Name.ctx);
+        return compiler_nameop(c, e->v.Name.id, e->v.Name.ctx, 0);
     /* child nodes of List and Tuple will have expr_context set */
     case Const_kind:
-        return compiler_nameop(c, e->v.Const.id, e->v.Const.ctx);
+        return compiler_nameop(c, e->v.Const.id, e->v.Const.ctx, 1);
     case List_kind:
         return compiler_list(c, e);
     case Tuple_kind:
@@ -3156,11 +3230,11 @@ compiler_augassign(struct compiler *c, stmt_ty s)
         VISIT(c, expr, auge);
         break;
     case Name_kind:
-        if (!compiler_nameop(c, e->v.Name.id, Load))
+        if (!compiler_nameop(c, e->v.Name.id, Load, 0))
             return 0;
         VISIT(c, expr, s->v.AugAssign.value);
         ADDOP(c, inplace_binop(c, s->v.AugAssign.op));
-        return compiler_nameop(c, e->v.Name.id, Store);
+        return compiler_nameop(c, e->v.Name.id, Store, 0);
     default:
         PyErr_Format(PyExc_SystemError,
             "invalid node type (%d) for augmented assignment",
