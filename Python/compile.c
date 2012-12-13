@@ -2392,7 +2392,7 @@ compiler_nameop(struct compiler *c, identifier name, expr_context_ty ctx, int is
         case Store: 
             if (isConst) {
                 PyErr_Format(PyExc_SyntaxError,
-                         "'%s' is a const",
+                         "'%s' const, deref, store, isConst",
                          PyString_AS_STRING(name));
                 Py_DECREF(mangled);
                 return 0;
@@ -2402,7 +2402,7 @@ compiler_nameop(struct compiler *c, identifier name, expr_context_ty ctx, int is
         case AugStore:
             if (isConst) {
                 PyErr_Format(PyExc_SyntaxError,
-                         "'%s' is a const",
+                         "'%s' const, deref, augstore/load, isConst",
                          PyString_AS_STRING(name));
                 Py_DECREF(mangled);
                 return 0;
@@ -2431,13 +2431,13 @@ compiler_nameop(struct compiler *c, identifier name, expr_context_ty ctx, int is
         case Store:
             if (isConst && !is_const_assign) {
                 PyErr_Format(PyExc_SyntaxError,
-                         "'%s' is a const",
+                         "'%s' const, fast, store, isConst, !is_const_assign",
                          PyString_AS_STRING(name));
                 Py_DECREF(mangled);
                 return 0;
             } else if (!isConst && is_const_assign) {
                 PyErr_Format(PyExc_SyntaxError,
-                         "cannot make '%s' a const: it already exists!",
+                         "'%s' const, fast, store, !isConst, is_const_assign",
                          PyString_AS_STRING(name));
                 Py_DECREF(mangled);
                 return 0;
@@ -2451,7 +2451,7 @@ compiler_nameop(struct compiler *c, identifier name, expr_context_ty ctx, int is
         case AugStore:
             if (isConst) {
                 PyErr_Format(PyExc_SyntaxError,
-                         "'%s' is a const",
+                         "'%s' const, fast, augstore/load, isConst",
                          PyString_AS_STRING(name));
                 Py_DECREF(mangled);
                 return 0;
@@ -2475,13 +2475,13 @@ compiler_nameop(struct compiler *c, identifier name, expr_context_ty ctx, int is
         case Store:
             if (isConst && !is_const_assign) {
                 PyErr_Format(PyExc_SyntaxError,
-                         "'%s' is a const",
+                         "'%s' const, global, store, isConst, !is_const_assign",
                          PyString_AS_STRING(name));
                 Py_DECREF(mangled);
                 return 0;
             } else if (!isConst && is_const_assign) {
                 PyErr_Format(PyExc_SyntaxError,
-                         "cannot make '%s' a const: it already exists!",
+                         "'%s' const, global, store, !isConst, is_const_assign",
                          PyString_AS_STRING(name));
                 Py_DECREF(mangled);
                 return 0;
@@ -2495,7 +2495,7 @@ compiler_nameop(struct compiler *c, identifier name, expr_context_ty ctx, int is
         case AugStore:
             if (isConst) {
                 PyErr_Format(PyExc_SyntaxError,
-                         "'%s' is a const",
+                         "'%s' const, global, store, isConst",
                          PyString_AS_STRING(name));
                 Py_DECREF(mangled);
                 return 0;
